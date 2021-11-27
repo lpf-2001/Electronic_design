@@ -1,0 +1,434 @@
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: D:\´ó¶þ¿Î³Ì\Ð¡Ñ§ÆÚ\µç×ÓÏµÍ³Éè¼ÆÓë´´ÐÂ»ù´¡\Èí¼þ\C51\BIN\C51.EXE main.c BROWSE DEBUG OBJECTEXTEND TAB
+                    -S(2)
+
+line level    source
+
+   1          #include "ir.h"
+   2          #include "Key.H"
+   3          #include "sys.h"
+   4          #include "uart1.h"
+   5          #include "STC15F2K60S2.H"        //±ØÐë¡£
+   6          #include "displayer.h"
+   7          #include "adc.h"
+   8          #include "stdio.H"
+   9          #include "math.h"
+  10          #include "beep.h"
+  11          #include "string.h"
+  12          #include "music.h"
+  13          #include "m24c02.h"
+  14          #include "stdlib.h"
+  15          
+  16          code unsigned long SysClock=11059200;         //±ØÐë¡£¶¨ÒåÏµÍ³¹¤×÷Ê±ÖÓÆµÂÊ(Hz)£¬ÓÃ»§±ØÐëÐÞ¸Ä³ÉÓëÊµ¼Ê¹¤×÷Æµ
+             -ÂÊ£¨ÏÂÔØÊ±Ñ¡ÔñµÄ£©Ò»ÖÂ
+  17          #ifdef _displayer_H_                          //ÏÔÊ¾Ä£¿éÑ¡ÓÃÊ±±ØÐë¡££¨ÊýÂë¹ÜÏÔÊ¾ÒëÂë±í£¬ÓÃ‘ô¿ÉÐÞ¸Ä¡¢Ôö¼ÓµÈ
+             -£© 
+  18          code char decode_table[]={0x3f,0x06,0x5b,0x4f,0x66,0x6d,0x7d,0x07,0x7f,0x6f,0x00,0x08,0x40,0x01, 0x41, 0x4
+             -8, 
+  19                          /* ÐòºÅ:   0   1    2    3    4     5    6    7   8    9   10    11   12   13    14     15    
+             - */
+  20                          /* ÏÔÊ¾:   0   1    2    3    4     5    6    7   8    9  (ÎÞ)   ÏÂ-  ÖÐ-  ÉÏ-  ÉÏÖÐ-  ÖÐÏ
+             -Â-   */  
+  21                                   0x3f|0x80,0x06|0x80,0x5b|0x80,0x4f|0x80,0x66|0x80,0x6d|0x80,0x7d|0x80,0x07|0x80,0x
+             -7f|0x80,0x6f|0x80,0x77,0x79,0x39,0x37,0x76,0x30};  
+  22                       /* ´øÐ¡Êýµã     0         1         2         3         4         5         6         7      
+             -   8         9       R    E    C    N    H    I*/
+  23          #endif
+  24          
+  25          unsigned char funcmode;                  //¾ÙÀý¡£¶¨ÒåÏÔÊ¾¡¢°´¼ü¹¦ÄÜÄ£Ê½
+  26          enum funcname {                       //                    
+  27                         Rectxt,                     //                   
+  28                         Sendtxt,
+  29                         Checktxt,
+  30                         AI_Response}; 
+  31          unsigned char tempmode=0;
+  32          
+  33          unsigned char rxd[8];                          //¾ÙÀý¡£Í¨ÐÅ£¨´®¿Ú1¡¢´®¿Ú2¡¢ºìÍâ¹²ÓÃ£©»º³åÇø8×Ö½Ú
+  34          unsigned char rxdhead[2]={0xaa,0x55};          //¾ÙÀý¡£Í¨ÐÅ£¨´®¿Ú1¡¢´®¿Ú2£©½ÓÊÕ°üÍ·Æ¥Åä×Ö·û2×Ö½Ú£º£¨0xAA£¬
+             -0x55£©    
+  35          unsigned char wordtxt[20];
+  36          unsigned char d1,d2,d3,d4,d5,d6,d7,d8;
+  37          static t;
+  38          static flag;
+  39          static fmc;
+  40          int weishu;
+  41          int Ledt=1;
+  42          int music_on=0;
+  43          
+  44          
+  45          void deal_Seg(){
+  46   1          char temp1,temp2,temp3,temp4,temp5,temp6,temp7,temp8;
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 2   
+
+  47   1          static unsigned char ct100mS=10;
+  48   1          if(tempmode==2){
+  49   2          temp1=d1;
+  50   2          temp2=d2;
+  51   2          temp3=d3;
+  52   2          temp4=d4;
+  53   2          temp5=10;
+  54   2          temp6=29;
+  55   2          temp7=27;
+  56   2          temp8=5;
+  57   2          if(--ct100mS == 0) ct100mS=10;
+  58   2          if(ct100mS >= 8){
+  59   3            if(flag){
+  60   4            switch(weishu){
+  61   5              case 1: temp1=10;break;
+  62   5              case 2: temp2=10;break;
+  63   5              case 3: temp3=10;break;
+  64   5              case 4: temp4=10;break;
+  65   5              default:break;
+  66   5            }
+  67   4            }
+  68   3          }
+  69   2          }
+  70   1          if(tempmode==4){
+  71   2            temp1=d1;
+  72   2            temp2=d2;
+  73   2            temp3=d3;
+  74   2            temp4=d4;
+  75   2            temp5=12;
+  76   2            temp6=12;
+  77   2            temp7=31;
+  78   2            temp8=26;
+  79   2            if(--ct100mS == 0) ct100mS=10;
+  80   2            if(ct100mS >= 8){
+  81   3              if(flag){
+  82   4              switch(weishu){
+  83   5              case 1: temp1=10;break;
+  84   5              case 2: temp2=10;break;
+  85   5              case 3: temp3=10;break;
+  86   5              case 4: temp4=10;break;
+  87   5              default:break;
+  88   5              }
+  89   4            }
+  90   3          }
+  91   2          
+  92   2          }
+  93   1          if(tempmode==1){
+  94   2            temp8=26;
+  95   2            temp7=27;
+  96   2            temp6=28;
+  97   2            temp5=10;
+  98   2            temp4=GetIrRxNum()/1000%10;
+  99   2            temp3=GetIrRxNum()/100%10;
+ 100   2            temp2=GetIrRxNum()/10%10;
+ 101   2            temp1=GetIrRxNum()%10;
+ 102   2          }
+ 103   1          if(tempmode==3){
+ 104   2            temp8=28;
+ 105   2            temp7=30;
+ 106   2            temp6=27;
+ 107   2            temp1=d1;
+ 108   2            temp2=d2;
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 3   
+
+ 109   2            temp3=d3;
+ 110   2            temp4=d4;
+ 111   2            temp5=10;
+ 112   2          }
+ 113   1          if(tempmode==0){
+ 114   2            temp1=12;
+ 115   2            temp2=12;
+ 116   2            temp3=12;
+ 117   2            temp4=12;
+ 118   2            temp5=12;
+ 119   2            temp6=12;
+ 120   2            temp7=12;
+ 121   2            temp8=12;
+ 122   2          }
+ 123   1          Seg7Print(temp8,temp7,temp6,temp5,temp4,temp3,temp2,temp1);
+ 124   1      }
+ 125          
+ 126          void deal_Nav(){
+ 127   1          int i=0;
+ 128   1          int op;
+ 129   1          char temp1,temp2,temp3,temp4,temp5,temp6,temp7,temp8;
+ 130   1          if((tempmode==2)||(tempmode==4)){
+ 131   2                  temp1=d1;
+ 132   2                  temp2=d2;
+ 133   2                  temp3=d3;
+ 134   2                  temp4=d4;
+ 135   2          
+ 136   2            if(GetAdcNavAct(enumAdcNavKeyLeft) == enumKeyPress)  {if(flag) if(weishu<4){
+ 137   4              weishu++;
+ 138   4              switch(weishu){
+ 139   5                  case 1:d1=0;break;
+ 140   5                  case 2:d2=0;break;
+ 141   5                  case 3:d3=0;break;
+ 142   5                  case 4:d4=0;break;
+ 143   5                  default:break;
+ 144   5              }
+ 145   4              SetBeep(1000,20);
+ 146   4            }
+ 147   3          }
+ 148   2          if(GetAdcNavAct(enumAdcNavKeyRight)  == enumKeyPress)  {if(flag) if(weishu>1){
+ 149   4            weishu--;
+ 150   4            switch(weishu){
+ 151   5              case 0:d1=10;break;
+ 152   5              case 1:d2=10;break;
+ 153   5              case 2:d3=10;break;
+ 154   5              case 3:d4=10;break;
+ 155   5              default:break;
+ 156   5            }
+ 157   4            SetBeep(1000,20);
+ 158   4            }
+ 159   3          }
+ 160   2          if(GetAdcNavAct(enumAdcNavKeyUp)== enumKeyPress)  {
+ 161   3            if(flag){
+ 162   4              switch(weishu){
+ 163   5                case 1:d1++;break;
+ 164   5                case 2:d2++;break;
+ 165   5                case 3:d3++;break;
+ 166   5                case 4:d4++;break;
+ 167   5                default:break;
+ 168   5              }
+ 169   4            }
+ 170   3          }
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 4   
+
+ 171   2          if(GetAdcNavAct(enumAdcNavKeyDown)== enumKeyPress)  {
+ 172   3              if(flag){
+ 173   4                switch(weishu){
+ 174   5                  case 1:d1--;break;
+ 175   5                  case 2:d2--;break;
+ 176   5                  case 3:d3--;break;
+ 177   5                  case 4:d4--;break;
+ 178   5                  default:break;
+ 179   5                }
+ 180   4              }
+ 181   3            }
+ 182   2            if(GetAdcNavAct(enumAdcNavKey3)== enumKeyPress){
+ 183   3              flag=!flag;
+ 184   3              if(tempmode==4)
+ 185   3                for(op=0;op<20;op++){
+ 186   4                    wordtxt[op]='\0';
+ 187   4                }
+ 188   3              SetBeep(1000,20);
+ 189   3            }
+ 190   2            if(temp1==10)temp1=0;
+ 191   2            if(temp2==10)temp2=0;
+ 192   2            if(temp3==10)temp3=0;
+ 193   2            if(temp4==10)temp4=0;
+ 194   2            t=temp4*pow(10,3)+temp3*pow(10,2)+temp2*pow(10,1)+temp1;
+ 195   2            SetUart1Rxd(wordtxt, t, rxdhead, 0);
+ 196   2          }
+ 197   1      }
+*** WARNING C280 IN LINE 129 OF main.c: 'temp5': unreferenced local variable
+*** WARNING C280 IN LINE 129 OF main.c: 'temp6': unreferenced local variable
+*** WARNING C280 IN LINE 129 OF main.c: 'temp7': unreferenced local variable
+*** WARNING C280 IN LINE 129 OF main.c: 'temp8': unreferenced local variable
+ 198          
+ 199          
+ 200          void deal_music(){
+ 201   1          static ps=0;
+ 202   1          if(music_on==1){
+ 203   2            if(fmc==1){
+ 204   3              switch(wordtxt[ps]){
+ 205   4                  case '1':
+ 206   4                    if(GetBeepStatus()==0){
+ 207   5                        PlayTone(0xFA, 250 ,0x21, 0x10);
+ 208   5                        ps++;
+ 209   5                    }
+ 210   4                    break;
+ 211   4                  case '2':
+ 212   4                    if(GetBeepStatus()==0){
+ 213   5                        PlayTone(0xFA, 250 ,0x22, 0x10);
+ 214   5                        ps++;
+ 215   5                    }
+ 216   4                    break;
+ 217   4                  case '3':
+ 218   4                    if(GetBeepStatus()==0){
+ 219   5                        PlayTone(0xFA, 250 ,0x23, 0x10);
+ 220   5                        ps++;
+ 221   5                    }
+ 222   4                  case '4':
+ 223   4                    if(GetBeepStatus()==0){
+ 224   5                        PlayTone(0xFA, 250 ,0x24, 0x10);
+ 225   5                        ps++;
+ 226   5                    }
+ 227   4                  case '5':
+ 228   4                    if(GetBeepStatus()==0){
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 5   
+
+ 229   5                        PlayTone(0xFA, 250 ,0x25, 0x10);
+ 230   5                        ps++;
+ 231   5                    }
+ 232   4                  case '6':
+ 233   4                    if(GetBeepStatus()==0){
+ 234   5                        PlayTone(0xFA, 250 ,0x26, 0x10);
+ 235   5                        ps++;
+ 236   5                    }
+ 237   4                  case '7':
+ 238   4                    if(GetBeepStatus()==0){
+ 239   5                        PlayTone(0xFA, 250 ,0x27, 0x10);
+ 240   5                        ps++;
+ 241   5                    }
+ 242   4              }
+ 243   3        
+ 244   3            }
+ 245   2                
+ 246   2          }
+ 247   1          if(ps>=t){
+ 248   2              ps=0;
+ 249   2          }
+ 250   1            
+ 251   1          
+ 252   1          
+ 253   1      
+ 254   1      }
+ 255          
+ 256          void deal_AI(){
+ 257   1          
+ 258   1          
+ 259   1          if(tempmode==4){
+ 260   2              if(strcmp(wordtxt,"music on")==0){
+ 261   3                  music_on=1;
+ 262   3                  Uart1Print("You are a creator",sizeof("You are a creator"));
+ 263   3              }
+ 264   2              /*if(music_on==1){
+ 265   2                  Uart1Print("This is your music",sizeof("This is your music") );
+ 266   2              }*/
+ 267   2              if(strcmp(wordtxt,"music off")==0){
+ 268   3                  music_on=0;
+ 269   3                  Uart1Print("What do you want to do next",sizeof("What do you want to do next"));
+ 270   3              }
+ 271   2          }
+ 272   1          
+ 273   1      }
+ 274          
+ 275          
+ 276          void deal_Ir(){
+ 277   1        if(tempmode==1){
+ 278   2            if(GetIrRxNum()!=0){
+ 279   3                SetBeep(1000,60);
+ 280   3                Uart1Print(&wordtxt,GetIrRxNum());
+ 281   3            }
+ 282   2        }
+ 283   1        
+ 284   1      }
+ 285          
+ 286          void deal_Key(){
+ 287   1            if(GetKeyAct(enumKey1)==enumKeyPress){
+ 288   2              if(tempmode==2){
+ 289   3                  IrPrint(&wordtxt,t);
+ 290   3              }
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 6   
+
+ 291   2              if(tempmode==3)
+ 292   2              Uart1Print(&wordtxt,t);
+ 293   2              if(tempmode==4){
+ 294   3                  if(music_on==1)
+ 295   3                  {
+ 296   4                      SetBeep(1000,20);
+ 297   4                      fmc=!fmc;
+ 298   4                      if(fmc==1)
+ 299   4                      Uart1Print( "Let's Play",sizeof("Let's Play"));
+ 300   4                  }
+ 301   3                  else{
+ 302   4                      SetBeep(1000,20);
+ 303   4                      Uart1Print( "Have a good day",sizeof("Have a good day"));
+ 304   4                  }
+ 305   3              }
+ 306   2            }
+ 307   1            if (GetKeyAct(enumKey2)== enumKeyPress){                                                //Ê¾Àý¡£°´¼ü2:£¨°
+             -´ÏÂÊ±£©ÇÐ»»ÏÔÊ¾ºÍ°´¼ü¹¦ÄÜÄ£Ê½           
+ 308   2                SetBeep(1000,20); 
+ 309   2                if(++funcmode > AI_Response) funcmode= Rectxt;  
+ 310   2                M24C02_Write(0x00,funcmode); 
+ 311   2                if (funcmode == Checktxt){
+ 312   3                    tempmode=3;
+ 313   3                    SetUart1Rxd(wordtxt, t, rxdhead, 0);
+ 314   3                }
+ 315   2                if(funcmode == Rectxt){
+ 316   3                    tempmode=1;
+ 317   3                    SetIrRxd(wordtxt);
+ 318   3                    SetUart1Rxd(wordtxt,GetIrRxNum(), rxdhead, 0);
+ 319   3                }
+ 320   2                if(funcmode == Sendtxt){
+ 321   3                    tempmode=2;
+ 322   3                }
+ 323   2                if (funcmode == AI_Response){
+ 324   3                    tempmode=4;
+ 325   3                }
+ 326   2            }
+ 327   1      }
+ 328          
+ 329          void deal_Led()
+ 330          {
+ 331   1        static i;
+ 332   1        if((tempmode==2)||(tempmode==3))
+ 333   1            LedPrint(t);
+ 334   1        if((tempmode==0)||(tempmode==4)){
+ 335   2            i++;
+ 336   2            if(i==10){
+ 337   3                i=0;
+ 338   3                LedPrint(Ledt);
+ 339   3                Ledt=Ledt*2;
+ 340   3                if(Ledt>512)Ledt=1;
+ 341   3            }
+ 342   2        }
+ 343   1        if(tempmode==1){
+ 344   2            LedPrint(GetIrRxNum());
+ 345   2        }
+ 346   1      }
+ 347          
+ 348          void main(){
+ 349   1          MySTC_Init();     // MySTC_OS ³õÊ¼»¯         //´ËÐÐ±ØÐë£¡£¡£¡
+ 350   1          IrInit(NEC_R05d);
+ 351   1          DisplayerInit();
+C51 COMPILER V9.51   MAIN                                                                  09/13/2021 15:05:11 PAGE 7   
+
+ 352   1          BeepInit();
+ 353   1          AdcInit(ADCexpEXT);                              //¾ÙÀý£¬ADCÄ£¿é³õÊ¼»¯£¬ÓÐ²ÎÊý£¬Ñ¡ÔñÀ©Õ¹½Ó¿ÚEXTÉÏP1.0¡¢P
+             -1.1ÊÇ·ñÒ²×öADC¹¦ÄÜ
+ 354   1          Key_Init();
+ 355   1          MusicPlayerInit();
+ 356   1          Uart1Init(1200);
+ 357   1          d1=0;
+ 358   1          d2=10;
+ 359   1          d3=10;
+ 360   1          d4=10;
+ 361   1          d5=10;
+ 362   1          d6=10;
+ 363   1          d7=10;
+ 364   1          d8=10;
+ 365   1          weishu=0;
+ 366   1          SetDisplayerArea(0,7); 
+ 367   1          SetEventCallBack(enumEventSys1mS , deal_Led);
+ 368   1          SetEventCallBack(enumEventSys100mS , deal_Seg);
+ 369   1          SetEventCallBack(enumEventSys10mS , deal_music);
+ 370   1          SetEventCallBack(enumEventKey, deal_Key);
+ 371   1          SetEventCallBack(enumEventIrRxd,deal_Ir);
+ 372   1          SetEventCallBack(enumEventUart1Rxd,deal_AI);
+ 373   1          SetEventCallBack(enumEventNav, deal_Nav); //µ¼º½°´¼üÊÂ¼þ´¥·¢
+ 374   1          
+ 375   1          while(1)            // ÏµÍ³Ö÷Ñ­»·              //´ËÐÐ±ØÐë£¡£¡£¡     
+ 376   1          { MySTC_OS();     // MySTC_OS ¼ÓÔØ           //´ËÐÐ±ØÐë£¡£¡£¡
+ 377   2      /*****************  MySTC_OS ³õÊ¼»¯Óë¼ÓÔØ½áÊø  ********************************/  
+ 378   2            
+ 379   2      //******* ÓÃ»§³ÌÐò¶Î7£ºÓÃ»§main()º¯Êý£¨Ö÷Ñ­»·³ÌÐò£© *************//
+ 380   2            
+ 381   2            
+ 382   2          }               //Ö÷Ñ­»·while(1)½áÊø         //´ËÐÐ±ØÐë£¡£¡£¡ 
+ 383   1      
+ 384   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1853    ----
+   CONSTANT SIZE    =    128    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     57      18
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  4 WARNING(S),  0 ERROR(S)
